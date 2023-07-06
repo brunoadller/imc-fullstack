@@ -3,11 +3,16 @@ package com.imcproject.backend.domain.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.modelmapper.internal.bytebuddy.implementation.bytecode.Throw;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.imcproject.backend.domain.exception.RegisterException;
+import com.imcproject.backend.domain.exception.VerifyException;
 import com.imcproject.backend.domain.model.ImcUser;
 import com.imcproject.backend.domain.repository.ImcUserRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -20,24 +25,35 @@ public class ImcUserService {
     return imcUserRepository.findAll();
   }
 
-  public Optional<ImcUser> getForId(Long id) {
-    return imcUserRepository.findById(id);
+  public ResponseEntity<ImcUser> getForId(Long id) throws VerifyException {
+    return imcUserRepository.findById(id)
+        .map(ResponseEntity::ok)
+        .orElseThrow(() -> new VerifyException("Id do Usuário não encontrado"));
   }
 
+  @Transactional
   public ImcUser registerUser(ImcUser user) {
     return imcUserRepository.save(user);
   }
 
-  public ImcUser update(Long id, ImcUser user){
-    
-    user.setId(id);
+  public ResponseEntity<ImcUser> update(Long id, ImcUser user) {
 
-    return imcUserRepository.save(user);
-    
+    if (!imcUserRepository.existsById(id)) {
+      return ResponseEntity.notFound().build();
+    }
+    user.setId(id);
+    imcUserRepository.save(user);
+    return ResponseEntity.ok(user);
   }
 
-   public void delete(Long id) {
+  @Transactional
+  public ResponseEntity<Void> delete(Long id) {
+    if (!imcUserRepository.existsById(id)) {
+      return ResponseEntity.notFound().build();
+    }
     imcUserRepository.deleteById(id);
+
+    return ResponseEntity.noContent().build();
   }
 
 }
